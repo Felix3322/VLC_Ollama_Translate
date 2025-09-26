@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vlc-ollama-translate"
+version = "0.1.0"
+description = "VLC port of the PotPlayer ChatGPT Translate plugin"
+authors = [{name = "ChatGPT", email = ""}]
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+]
+
+[project.scripts]
+vlc-ollama-translate = "vlc_ollama_translate.__main__:main"
