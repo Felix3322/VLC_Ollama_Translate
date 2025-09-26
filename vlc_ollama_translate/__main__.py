@@ -103,8 +103,9 @@ def cmd_translate(args: argparse.Namespace) -> None:
         except APIError as exc:
             raise SystemExit(f"Translation failed: {exc}")
         if args.include_original:
-            lines = entry.normalised_text().splitlines()
-            lines.append(result.translated)
+            original_lines = [line for line in entry.normalised_text().splitlines() if line.strip()]
+            lines = [result.translated]
+            lines.extend(original_lines)
         else:
             lines = [result.translated]
         translated_blocks.append(_format_block(index, entry.start, entry.end, lines))

@@ -22,6 +22,92 @@ local dlg = nil
 local widgets = {}
 local current_config = {}
 
+local subtitle_extensions = {".srt", ".ass", ".ssa", ".vtt", ".sub"}
+
+local function trim(text)
+  if not text then
+    return ""
+  end
+  return text:match("^%s*(.-)%s*$")
+end
+
+local function file_exists(path)
+  if not path or path == "" then
+    return false
+  end
+  local handle = io.open(path, "r")
+  if handle then
+    handle:close()
+    return true
+  end
+  return false
+end
+
+local function decode_path(path)
+  if not path or path == "" then
+    return nil
+  end
+  local ok, decoded = pcall(vlc.strings.decode_uri, path)
+  if ok and decoded and decoded ~= "" then
+    return decoded
+  end
+  return path
+end
+
+local function detect_subtitle_from_media()
+  local input = vlc.object.input()
+  if input then
+    local ok, configured = pcall(vlc.var.get, input, "sub-file")
+    if ok then
+      configured = trim(configured)
+      if configured ~= "" then
+        local decoded = decode_path(configured)
+        if file_exists(decoded) then
+          return decoded
+        end
+        if file_exists(configured) then
+          return configured
+        end
+      end
+    end
+  end
+
+  local item = vlc.input.item()
+  if not item then
+    return nil
+  end
+  local uri = item:uri()
+  if not uri or uri == "" then
+    return nil
+  end
+  local decoded_uri = decode_path(uri)
+  if not decoded_uri or decoded_uri == "" then
+    return nil
+  end
+
+  local base = decoded_uri:match("^(.*)%.%w+$")
+  if not base or base == "" then
+    return nil
+  end
+
+  for _, ext in ipairs(subtitle_extensions) do
+    local candidate = base .. ext
+    if file_exists(candidate) then
+      return candidate
+    end
+  end
+
+  return nil
+end
+
+local function detect_subtitle_path()
+  local path = detect_subtitle_from_media()
+  if path and path ~= "" then
+    return path
+  end
+  return nil
+end
+
 local function escape_arg(text)
   if not text or text == "" then
     return "''"
@@ -153,13 +239,23 @@ end
 
 local function translate_subtitles()
   local input_path = widgets.subtitle_path:get_text()
-  if not input_path or input_path == "" then
-    show_status("Please provide an input subtitle path")
-    return
+  if not input_path or trim(input_path) == "" then
+    local detected = detect_subtitle_path()
+    if detected then
+      widgets.subtitle_path:set_text(detected)
+      input_path = detected
+      show_status("Detected subtitle file: " .. detected)
+    else
+      show_status("Unable to detect subtitle file for the current media")
+      return
+    end
   end
   local output_path = widgets.output_path:get_text()
   if not output_path or output_path == "" then
     output_path = input_path .. ".translated.srt"
+    if widgets.output_path and widgets.output_path.set_text then
+      widgets.output_path:set_text(output_path)
+    end
   end
   local args = {
     "vlc-ollama-translate", "translate",
@@ -198,7 +294,8 @@ local function create_dialog()
   widgets.save_btn = dlg:add_button("Save configuration", save_configuration, 3, 6, 1, 1)
 
   widgets.subtitle_label = dlg:add_label("Subtitle file (SRT)", 1, 7, 1, 1)
-  widgets.subtitle_path = dlg:add_text_input("", 1, 8, 3, 1)
+  local auto_subtitle = detect_subtitle_path() or ""
+  widgets.subtitle_path = dlg:add_text_input(auto_subtitle, 1, 8, 3, 1)
   widgets.output_label = dlg:add_label("Output path", 1, 9, 1, 1)
   widgets.output_path = dlg:add_text_input("", 1, 10, 3, 1)
   widgets.translate_btn = dlg:add_button("Translate", translate_subtitles, 3, 10, 1, 1)
@@ -208,7 +305,7 @@ end
 function descriptor()
   return {
     title = "ChatGPT Translate",
-    version = "1.0",
+    version = "1.1",
     author = "ChatGPT",
     shortdesc = "ChatGPT subtitle translation",
     description = "Translate subtitles through ChatGPT compatible APIs",
@@ -218,7 +315,11 @@ end
 function activate()
   current_config = load_config()
   create_dialog()
-  show_status("Ready")
+  if widgets.subtitle_path and trim(widgets.subtitle_path:get_text()) ~= "" then
+    show_status("Ready (subtitle detected)")
+  else
+    show_status("Ready")
+  end
 end
 
 function deactivate()
