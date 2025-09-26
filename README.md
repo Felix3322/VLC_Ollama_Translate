@@ -18,6 +18,16 @@ Port of the [PotPlayer ChatGPT Translate](https://github.com/Felix3322/PotPlayer
 
 ## Installation
 
+**Quick start:** run the automated installer to install the Python backend and copy the Lua extension in one step:
+
+```bash
+python scripts/install.py
+```
+
+Use `--user` to perform a user-level pip install or `--skip-pip` if the package is already available in your environment.  The script detects the correct VLC extensions folder for Windows, macOS, and Linux, but you can override the destination with `--extensions-dir /custom/path` when required.
+
+If you prefer manual setup, follow these steps:
+
 1. Install the Python package (a virtual environment is recommended):
    ```bash
    python -m venv .venv
@@ -76,8 +86,8 @@ All CLI options are additive, so you can update individual fields without rewrit
    - **Model | URL | nullkey | delay | retry | cache** – paste your login string; press **Save configuration** after editing.
    - **API Key** – optional if `nullkey` is present.
    - **Source/Target language** – dropdowns replicate the PotPlayer list (`Auto` leaves detection to the model).
-3. Provide the path to an `.srt` subtitle file.  Leaving **Output path** empty defaults to `<input>.translated.srt`.
-4. Press **Translate**.  The panel streams progress to the status bar; the translated file includes the original line above the translation, matching the PotPlayer workflow.
+3. Provide the path to an `.srt` subtitle file.  The panel auto-fills this field with the subtitle currently loaded in VLC when available, and leaving **Output path** empty defaults to `<input>.translated.srt`.
+4. Press **Translate**.  The panel streams progress to the status bar; the translated file writes the translated line above the original subtitle so both remain visible.
 
 > **Tip:** The Lua panel simply shells out to the Python CLI.  If you are running VLC from a different Python environment, make sure `vlc-ollama-translate` is on the PATH for that session.
 
